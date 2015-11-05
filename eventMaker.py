@@ -25,7 +25,15 @@ def get_time():
     """ returns the time in the format google apis use """
     return time
 
-
+def iButton2Name():
+    pass
+    
+def connected():
+    try:
+        urlopen(csh.rit.edu)
+        return True
+    except:
+        False    
 def get_original_time():
     """ gets the time in the iso format of T """
     time = datetime.now().replace(microsecond=0).isoformat('T')
@@ -46,7 +54,7 @@ def get_calendar():
               "+end%2Csummary%2Cdescription%29&singleEvents=True&maxResults=30&showDeleted=False" \
               "&timeMin=" + get_time()
     
-    try:
+    if connected:
         """ opens Google API """
         calendar_http = urlopen(default)
         """ decodes calendar from HTTP to UTF-8 """
@@ -57,7 +65,7 @@ def get_calendar():
         calendar_file.close()
         print('Downloaded Calendar at: ' + get_original_time().replace("T", " "))
         
-    except:
+    else:
         print('Calendar failed to connect. Using saved Calendar.')
     
 """
@@ -73,24 +81,37 @@ def get_calendar():
 """
 
 def sign_in(sign_ibutton):
-    try:
-        """ Ibutton2UID service provided by CSH """
+    if connected:
+        """ 
+	 Ibutton2UID service provided by CSH
+        """
         response = urlopen("http://www.csh.rit.edu:56124/?ibutton=" + sign_ibutton)
-        """ decodes the HTTP response into the UTF-8 format """
+        
+        """
+         decodes the HTTP response into the UTF-8 format 
+        """
+
         str_response = response.read().decode('utf-8')
-        """ Loads the decoded response into a json object """
+       
+        """ 
+	 Loads the decoded response into a json object 
+	"""
         sign_person = json.loads(str_response)
         """ if the iButton is valid there will be a 'cn' or common name """
         if 'cn' in str_response:
             common_name = sign_person['cn']
             return common_name
-    except:
+    else:
         """returns the iButton ID instead of name. Translated later"""
+        print("iButton ID was used instead of Common name.")
         return sign_ibutton
 
 
 def get_event():
-    """ get_calendar creates a calendar file where this program is being run from """
+    
+    """
+     get_calendar creates a calendar file where this program is being run from
+    """
     get_calendar()
     path = os.getcwd() + "/calendar.txt"
     calendar_path = open(path, 'r')
@@ -99,14 +120,18 @@ def get_event():
     if not calendar_check:
         print('error: empty calendar')
         return None, None
-    """ goes to Calendar save and then loads it. This is the list of events we will use"""
+    """
+      goes to Calendar save and then loads it. This is the list of events we will use
+    """
     events = json.load(calendar_path)
-    """ If the event does not contain a begining and end time, skip it """
+   
     x = 0
-    while 'dateTime' not in events['items'][x]['end']:
-        x += 1
-    """ If the current time is past the end time, skip it """
-    while get_original_time() >= events['items'][x]['end']['dateTime']:
+       
+    """
+     If the current time is too late for this event or no time exists, skip it 
+    """
+    while (get_original_time() >= events['items'][x]['end']['dateTime']) or ('dateTime' not in events['items'][x]['end']):
+        
         """
          DEBUG: How is loops to find most recent/legal event
          print (getOriginalTime())
@@ -115,15 +140,17 @@ def get_event():
         """
         x += 1
     top_event = events['items'][x]
-    """ if the start time is further than 15 minutes from now, wait
-     DEBUG: Checking the event times and current times
-     print (top_event['summary'])
-     print (top_event['start']['dateTime'])
-     print (comparetime())
-     DEBUG: When an event is currently not going on, this function will return none """
-    #if top_event['start']['dateTime'] > comparetime():
-    #    print("There is no legal event")
-    #    return None, None
+    """ 
+     if the start time is further than 15 minutes from now, wait
+     DEBUG: Checking the event times and current time
+    print (top_event['summary'])
+    print (top_event['start']['dateTime'])
+    print (comparetime())
+     DEBUG: When an event is currently not going on, this function will return none 
+    """
+    if top_event['start']['dateTime'] > comparetime():
+        print("There is no legal event")
+        return None, None
     """ sets name of event to all lower case """
     top_event['summary'] = top_event['summary'].lower()
     """ creates a list of files in the events list. """
@@ -143,7 +170,6 @@ def file_manager(person_main, past_event):
     event_name, exist = get_event()
     #print("out")
     if event_name == exist:
-        #print("Nones")
         return past_event
     elif exist:
         #print("it exists")
@@ -164,27 +190,34 @@ def file_manager(person_main, past_event):
     # if the file does not exist, write the person who is signed in to the Event File 
     elif not exist:
         print(person_main)
-        #print("does not exist")
+        #print("New event!")
         attendance_w = open(folderlocation + event_name + '.dat', 'w+')
         attendance_w.write(person_main + "\n")
         attendance_w.close()
     else:
         pass
 
-    if (past_event != event_name) and (past_event != "start"):
+    if (past_event != event_name) and (past_event != ""):
+        attendance_c = open(folerlocation + event_name+'.dat','r')
+        attendlist = attendance_c.read()
+        for line in attendlist:
+            line = sign_in(line)
         mail_evals(past_event)
     return event_name
 
 
 def mail_evals(name,n):
-    try:
+    if connected:
+        passw = open('./house/pi/pw.txt','r')
+        password = passw.read()
+        passw.close()
         #using name to find file that holds attendance for event 'name'
         attend_mail = open(folderlocation + name + '.dat', 'r')
         # creates a variable of all members attending event 'name'
         attended_mail = attend_mail.read()
         attend_mail.close()
         smtp_obj = smtplib.SMTP('mail.csh.rit.edu', 25)
-        smtp_obj.login('bmbowdish', input("What is your password?"))
+        smtp_obj.login('bmbowdish', passw)
         sender = 'bmbowdish@csh.rit.edu'
         receivers = 'bmbowdish@csh.rit.edu'
         message = ("From: Attendance Keeper <bmbowdish@csh.rit.edu>\n"
@@ -201,7 +234,7 @@ def mail_evals(name,n):
                 os.remove('/UnsentMail/' + mail)
                 print("Backup mail: " + str(old_name))
 
-    except:
+    else:
         if n < 10:
             print("Mail: " + name + "| Attempt: " + str(n) + "| Status: Failed|") 
             mail_evals(name,n+1)
@@ -216,21 +249,19 @@ def mail_evals(name,n):
 
 
 # the location of the Event Folder.
-folderlocation = "./EventFolder/"
-event_before = "start"
-attend = open((folderlocation + event_before + '.dat'), 'w+')
-attend.close()
+folderlocation = "./EventFolder/" 
+event_before = ""
+
 """
  DEBUG: calls hardcoded iButtons
  iButton = getibuttonid()
 """
 x = 0
 while x < 5:
-    try:
-        connect = urlopen('http://csh.rit.edu')
+    if connected:
         print('Connected successfully')
         x = 5
-    except:
+    else:
         x += 1
         print('Connect failed, retrying')
         print(x)
@@ -252,6 +283,5 @@ while True:
                 # manages the files that hold attendance
                 event_before = file_manager(person, event_before)
     except:
-        pass
-    
-# mail_evals(event_before,0)
+       pass
+
