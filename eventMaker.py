@@ -3,7 +3,6 @@ __author__ = 'Braden'
  Created by Braden Bowdish
  For Computer Science House
  Attendance Keeper
- Set-Up
  
 """
 from urllib.request import urlopen
@@ -25,9 +24,6 @@ def get_time():
     """ returns the time in the format google apis use """
     return time
 
-def iButton2Name():
-    pass
-    
 def connected():
     try:
         urlopen(csh.rit.edu)
@@ -67,23 +63,11 @@ def get_calendar():
         
     else:
         print('Calendar failed to connect. Using saved Calendar.')
-    
-"""
- DEBUG: Hardcoded iButton IDs temporarily
- def getibuttonid():
-    boo = random.randint(0, 2)
-    if boo == 1:
-        return "FE000001291A0D01"
-    elif boo == 0:
-        return "0D00000128F27D01"
-
-    return "2D00000128FEF801"
-"""
 
 def sign_in(sign_ibutton):
     if connected:
         """ 
-	 Ibutton2UID service provided by CSH
+	 Ibutton2UID service provided by CSH, written by Nick Depinet 
         """
         response = urlopen("http://www.csh.rit.edu:56124/?ibutton=" + sign_ibutton)
         
@@ -96,11 +80,15 @@ def sign_in(sign_ibutton):
         """ 
 	 Loads the decoded response into a json object 
 	"""
+	
         sign_person = json.loads(str_response)
+        
         """ if the iButton is valid there will be a 'cn' or common name """
+        
         if 'cn' in str_response:
             common_name = sign_person['cn']
             return common_name
+            
     else:
         """returns the iButton ID instead of name. Translated later"""
         print("iButton ID was used instead of Common name.")
@@ -124,12 +112,12 @@ def get_event():
       goes to Calendar save and then loads it. This is the list of events we will use
     """
     events = json.load(calendar_path)
-   
-    x = 0
        
     """
      If the current time is too late for this event or no time exists, skip it 
     """
+    
+    x = 0
     while (get_original_time() >= events['items'][x]['end']['dateTime']) or ('dateTime' not in events['items'][x]['end']):
         
         """
@@ -139,25 +127,39 @@ def get_event():
          print(events['items'][x]['summary'])
         """
         x += 1
+        
     top_event = events['items'][x]
+    
     """ 
-     if the start time is further than 15 minutes from now, wait
-     DEBUG: Checking the event times and current time
-    print (top_event['summary'])
-    print (top_event['start']['dateTime'])
-    print (comparetime())
-     DEBUG: When an event is currently not going on, this function will return none 
+     if the start time is further than 15 minutes, when an event is currently not going on, this function will return none 
     """
+    
     if top_event['start']['dateTime'] > comparetime():
         print("There is no legal event")
         return None, None
-    """ sets name of event to all lower case """
+        
+    """ 
+     sets name of event to all lower case 
+    """
+    
     top_event['summary'] = top_event['summary'].lower()
-    """ creates a list of files in the events list. """
+    
+    """ 
+     creates a list of files in the events list. 
+    """
+    
     onlyfiles = [f for f in listdir("" + folderlocation) if isfile(join('' + folderlocation, f))]
-    """ creates an event with the name set to 'event name' + 'time of event' """
+    
+    """
+     creates an event with the name set to 'event name' + 'time of event' 
+    """
+    
     top_event['summary'] = str(top_event['start']['dateTime'][:10] + ' ' + top_event['summary'])
-    """ if the name of the Event File is in the Event Folder, that means the event exists, so I set exists to true """
+    
+    """ 
+     if the name of the Event File is in the Event Folder, that means the event exists, so I set exists to true 
+    """
+    
     a = onlyfiles
     b = top_event['summary'] + '.dat'
     exists = (b in a)
@@ -166,13 +168,17 @@ def get_event():
 
 
 def file_manager(person_main, past_event):
-    # asks for the most recent valid event; also determines if the Event File existed prior to this call
+	
+    """
+     Asks for the most recent valid event; also determines if the Event File existed prior to this call
+    """
+    
     event_name, exist = get_event()
-    #print("out")
+    
     if event_name == exist:
         return past_event
     elif exist:
-        #print("it exists")
+       
         person_main = str(person_main)
         print(person_main)
         # file_attend is the Attended List in the Event File 
