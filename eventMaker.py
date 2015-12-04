@@ -3,7 +3,8 @@ __author__ = 'Braden'
  Created by Braden Bowdish
  For Computer Science House
  Attendance Keeper
- 
+ Set-Up
+
 """
 from urllib.request import urlopen
 import json
@@ -11,30 +12,32 @@ from datetime import datetime
 from datetime import timedelta
 from os import listdir
 from os.path import isfile, join
-import random
 import os
 import smtplib
 from serial import Serial
 
-def get_time():
-    """ gets the time in the iso format of T """
+def get_api_time():
+    """
+    This makes the time in the format the Google API needs
+    """
     time = datetime.utcnow().replace(microsecond=0).isoformat('T')
-    """ replace each instance of ':' with '%3A' which is the correct format """
     time = time.replace(":", "%3A") + "%2B00%3A00"
-    """ returns the time in the format google apis use """
     return time
 
 def connected():
+    """
+    Connects to CSH.rit.edu to confirm connection to internet
+    """
     try:
-        urlopen(csh.rit.edu)
+        urlopen('http://csh.rit.edu')
         return True
     except:
-        False    
-def get_original_time():
+       return False
+
+def get_time():
     """ gets the time in the iso format of T """
     time = datetime.now().replace(microsecond=0).isoformat('T')
     return time
-
 
 def comparetime():
     """ returns the time minus 15 mins in your timezone """
@@ -48,9 +51,9 @@ def get_calendar():
               + calendar + \
               "/events?orderBy=startTime&key=AIzaSyBdQJG8Zc1pVkpBk27dmg6WmiYBpjyxGA4&fields=items%28location%2Cstart%2C" \
               "+end%2Csummary%2Cdescription%29&singleEvents=True&maxResults=30&showDeleted=False" \
-              "&timeMin=" + get_time()
-    
-    if connected:
+              "&timeMin=" + get_api_time()
+
+    if connected():
         """ opens Google API """
         calendar_http = urlopen(default)
         """ decodes calendar from HTTP to UTF-8 """
@@ -59,36 +62,43 @@ def get_calendar():
         calendar_file = open('calendar.txt', 'w+')
         calendar_file.write(calendar_json)
         calendar_file.close()
-        print('Downloaded Calendar at: ' + get_original_time().replace("T", " "))
-        
+        print('Downloaded Calendar at: ' + get_time().replace("T", " "))
+
     else:
         print('Calendar failed to connect. Using saved Calendar.')
 
+"""
+ DEBUG: Hardcoded iButton IDs temporarily
+ def getibuttonid():
+    boo = random.randint(0, 2)
+    if boo == 1:
+        return "FE000001291A0D01"
+    elif boo == 0:
+        return "0D00000128F27D01"
+    return "2D00000128FEF801"
+"""
+
 def sign_in(sign_ibutton):
     if connected:
-        """ 
-	 Ibutton2UID service provided by CSH, written by Nick Depinet 
+        """
+	Ibutton2UID service provided by CSH
         """
         response = urlopen("http://www.csh.rit.edu:56124/?ibutton=" + sign_ibutton)
-        
+
         """
-         decodes the HTTP response into the UTF-8 format 
+         decodes the HTTP response into the UTF-8 format
         """
 
         str_response = response.read().decode('utf-8')
-       
-        """ 
-	 Loads the decoded response into a json object 
-	"""
-	
+
+        """
+	    Loads the decoded response into a json object
+	    """
         sign_person = json.loads(str_response)
-        
         """ if the iButton is valid there will be a 'cn' or common name """
-        
         if 'cn' in str_response:
             common_name = sign_person['cn']
             return common_name
-            
     else:
         """returns the iButton ID instead of name. Translated later"""
         print("iButton ID was used instead of Common name.")
@@ -96,7 +106,7 @@ def sign_in(sign_ibutton):
 
 
 def get_event():
-    
+
     """
      get_calendar creates a calendar file where this program is being run from
     """
@@ -105,21 +115,21 @@ def get_event():
     calendar_path = open(path, 'r')
     calendar_check = ('calendar.txt' in [j for j in listdir("" + os.getcwd()) if isfile(join('' + os.getcwd(), j))])
 
-    if not calendar_check:
+    if calendar_check == False:
         print('error: empty calendar')
         return None, None
     """
       goes to Calendar save and then loads it. This is the list of events we will use
     """
     events = json.load(calendar_path)
-       
-    """
-     If the current time is too late for this event or no time exists, skip it 
-    """
-    
+
     x = 0
-    while (get_original_time() >= events['items'][x]['end']['dateTime']) or ('dateTime' not in events['items'][x]['end']):
-        
+
+    """
+     If the current time is too late for this event or no time exists, skip it
+    """
+    while (get_time() >= events['items'][x]['end']['dateTime']) or ('dateTime' not in events['items'][x]['end']):
+
         """
          DEBUG: How is loops to find most recent/legal event
          print (getOriginalTime())
@@ -127,39 +137,25 @@ def get_event():
          print(events['items'][x]['summary'])
         """
         x += 1
-        
     top_event = events['items'][x]
-    
-    """ 
-     if the start time is further than 15 minutes, when an event is currently not going on, this function will return none 
     """
-    
-    if top_event['start']['dateTime'] > comparetime():
-        print("There is no legal event")
-        return None, None
-        
-    """ 
-     sets name of event to all lower case 
+     if the start time is further than 15 minutes from now, wait
+     DEBUG: Checking the event times and current time
+    print (top_event['summary'])
+    print (top_event['start']['dateTime'])
+    print (comparetime())
+     DEBUG: When an event is currently not going on, this function will return none
     """
-    
+    #if top_event['start']['dateTime'] > comparetime():
+    #    print("There is no legal event")
+    #    return None, None
+    """ sets name of event to all lower case """
     top_event['summary'] = top_event['summary'].lower()
-    
-    """ 
-     creates a list of files in the events list. 
-    """
-    
+    """ creates a list of files in the events list. """
     onlyfiles = [f for f in listdir("" + folderlocation) if isfile(join('' + folderlocation, f))]
-    
-    """
-     creates an event with the name set to 'event name' + 'time of event' 
-    """
-    
+    """ creates an event with the name set to 'event name' + 'time of event' """
     top_event['summary'] = str(top_event['start']['dateTime'][:10] + ' ' + top_event['summary'])
-    
-    """ 
-     if the name of the Event File is in the Event Folder, that means the event exists, so I set exists to true 
-    """
-    
+    """ if the name of the Event File is in the Event Folder, that means the event exists, so I set exists to true """
     a = onlyfiles
     b = top_event['summary'] + '.dat'
     exists = (b in a)
@@ -168,22 +164,20 @@ def get_event():
 
 
 def file_manager(person_main, past_event):
-	
-    """
-     Asks for the most recent valid event; also determines if the Event File existed prior to this call
-    """
-    
+    # asks for the most recent valid event; also determines if the Event File existed prior to this call
     event_name, exist = get_event()
-    
+    #print("out")
     if event_name == exist:
+        """
+        if event_name and exist are the same, that means an error has occured
+        """
         return past_event
     elif exist:
-       
+        #print("it exists")
         person_main = str(person_main)
         print(person_main)
-        # file_attend is the Attended List in the Event File 
+        # file_attend is the Attended List in the Event File
         file_attend = open(folderlocation + event_name + '.dat', 'r').read()
-        attend.close()
         if person_main in file_attend:
             pass
 
@@ -193,7 +187,8 @@ def file_manager(person_main, past_event):
             attendance_w.write(person_main + ' \n' + file_attend)
             attendance_w.close()
 
-    # if the file does not exist, write the person who is signed in to the Event File 
+
+    # if the file does not exist, write the person who is signed in to the Event File
     elif not exist:
         print(person_main)
         #print("New event!")
@@ -204,7 +199,7 @@ def file_manager(person_main, past_event):
         pass
 
     if (past_event != event_name) and (past_event != ""):
-        attendance_c = open(folerlocation + event_name+'.dat','r')
+        attendance_c = open(folderlocation + event_name+'.dat','r')
         attendlist = attendance_c.read()
         for line in attendlist:
             line = sign_in(line)
@@ -213,7 +208,7 @@ def file_manager(person_main, past_event):
 
 
 def mail_evals(name,n):
-    if connected:
+    if connected():
         passw = open('./house/pi/pw.txt','r')
         password = passw.read()
         passw.close()
@@ -230,7 +225,7 @@ def mail_evals(name,n):
                    "To: Evals <Evals@csh.rit.edu>\n"
                    "Subject: " + name + "\n") + "Attendance List: \n" + attended_mail
         """ This sends the mail."""
-    
+
         smtp_obj.sendmail(sender, receivers, message)
         print(sender + " has successfully been sent an email!")
         if n == -1:
@@ -242,20 +237,24 @@ def mail_evals(name,n):
 
     else:
         if n < 10:
-            print("Mail: " + name + "| Attempt: " + str(n) + "| Status: Failed|") 
+            print("Mail: " + name + "| Attempt: " + str(n) + "| Status: Failed|")
             mail_evals(name,n+1)
         elif n == 10:
+            attend_mail = open(folderlocation + name + '.dat', 'r')
+            # creates a variable of all members attending event 'name'
+            attended_mail = attend_mail.read()
+            attend_mail.close()
             print("Fail to send mail. Attempted " + str(n-1) + " times.")
             unsent_mail = open(os.getcwd() + "/UnsentMail/" + name + ".dat",'w+')
             unsent_mail.write(attended_mail)
             unsent_mail.close()
-    
-            
-            
+
+
+
 
 
 # the location of the Event Folder.
-folderlocation = "./EventFolder/" 
+folderlocation = "./EventFolder/"
 event_before = ""
 
 """
@@ -264,7 +263,7 @@ event_before = ""
 """
 x = 0
 while x < 5:
-    if connected:
+    if connected():
         print('Connected successfully')
         x = 5
     else:
@@ -272,22 +271,18 @@ while x < 5:
         print('Connect failed, retrying')
         print(x)
         if x == 5:
-            print('No more attempts. Will use old calendar, and save iButton ID.')  
-            
-while True:
-    # ibutton = getibuttonid()
-    try:
-        ser = Serial('/dev/ttyACM0',9600)
-        ser.flushInput
-        ibutt = ser.readline()
-        if ibutt != "":
-            person = sign_in(ibutt.decode('utf-8'))
-            # signIn() errors return "" so this ends the program
-            if person == "":
-                print("Something went wrong with your button sign in!")
-            else:
-                # manages the files that hold attendance
-                event_before = file_manager(person, event_before)
-    except:
-       pass
+            print('No more attempts. Will use old calendar, and save iButton ID.')
 
+ser = Serial('COM3', 9600)
+while True:
+    ibutt = ser.readline()
+    ibutt = ibutt.decode('utf-8')
+    print(ibutt)
+    person = sign_in(ibutt)
+    print(person)
+    # signIn() errors return "" so this ends the program
+    if person == "":
+        print("Something went wrong with your button sign in!")
+    else:
+        # manages the files that hold attendance
+        event_before = file_manager(person, event_before)
