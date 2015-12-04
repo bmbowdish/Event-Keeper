@@ -3,8 +3,6 @@ __author__ = 'Braden'
  Created by Braden Bowdish
  For Computer Science House
  Attendance Keeper
- Set-Up
-
 """
 from urllib.request import urlopen
 import json
