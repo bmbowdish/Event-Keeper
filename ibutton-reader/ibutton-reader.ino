@@ -47,7 +47,7 @@ void checkiButton() {
       
       //Keep a delay so that it doesn't mistakenly read the same iButton more than once
       digitalWrite(11, LOW);
-      delay(3 000);
+      delay(3000);
       //Makes a new line
       Serial.println();
       
