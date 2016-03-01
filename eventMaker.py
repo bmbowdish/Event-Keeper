@@ -65,17 +65,6 @@ def get_calendar():
     else:
         print('Calendar failed to connect. Using saved Calendar.')
 
-"""
- DEBUG: Hardcoded iButton IDs temporarily
- def getibuttonid():
-    boo = random.randint(0, 2)
-    if boo == 1:
-        return "FE000001291A0D01"
-    elif boo == 0:
-        return "0D00000128F27D01"
-    return "2D00000128FEF801"
-"""
-
 def sign_in(sign_ibutton):
     if connected:
         """
