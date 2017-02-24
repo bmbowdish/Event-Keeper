@@ -151,23 +151,28 @@ def get_event():
 
 
 def file_manager(person_main, past_event):
+	
     # asks for the most recent valid event; also determines if the Event File existed prior to this call
     event_name, exist = get_event()
-    #print("out")
+	
     if event_name == exist:
         """
         if event_name and exist are the same, that means an error has occured
         """
         return past_event
+
     elif exist:
-        #print("it exists")
+        # print("it exists")
         person_main = str(person_main)
-        print(person_main)
+        # print(person_main)
+	
         # file_attend is the Attended List in the Event File
         file_attend = open(folderlocation + event_name + '.dat', 'r').read()
+	
+	# if the person has already been listed, do nothing
         if person_main in file_attend:
             pass
-
+	# if the person is not already been listed, add them to the list
         elif person_main not in file_attend:
             attendance_w = open(folderlocation + event_name + '.dat', 'w+')
             """ write to the new, but with the same name, Event File the former Event File's list and the new person """
@@ -193,17 +198,25 @@ def file_manager(person_main, past_event):
         mail_evals(past_event)
     return event_name
 
-
+""" 
+name: the name of the event and the time of the file
+n: mail evals is recursive in the event of a connection failure. N determines how many times a connection has failed.
+"""
 def mail_evals(name,n):
     if connected():
+	# get your password
         passw = open('./house/pi/pw.txt','r')
         password = passw.read()
         passw.close()
-        #using name to find file that holds attendance for event 'name'
+	
+        # using name to find file that holds attendance for event 'name'
         attend_mail = open(folderlocation + name + '.dat', 'r')
-        # creates a variable of all members attending event 'name'
+	
+        # creates a variable 'attended_mail' that is a list of of all members attending event 'name'. This is going to be emailed.
         attended_mail = attend_mail.read()
         attend_mail.close()
+	
+	# creates the piece of mail being sent
         smtp_obj = smtplib.SMTP('mail.csh.rit.edu', 25)
         smtp_obj.login('bmbowdish', passw)
         sender = 'bmbowdish@csh.rit.edu'
@@ -211,8 +224,9 @@ def mail_evals(name,n):
         message = ("From: Attendance Keeper <bmbowdish@csh.rit.edu>\n"
                    "To: Evals <Evals@csh.rit.edu>\n"
                    "Subject: " + name + "\n") + "Attendance List: \n" + attended_mail
-        """ This sends the mail."""
-
+	
+	
+        # this is how we send the mail once its been creatd.
         smtp_obj.sendmail(sender, receivers, message)
         print(sender + " has successfully been sent an email!")
         if n == -1:
@@ -238,16 +252,10 @@ def mail_evals(name,n):
 
 
 
-
-
 # the location of the Event Folder.
 folderlocation = "./EventFolder/"
 event_before = ""
 
-"""
- DEBUG: calls hardcoded iButtons
- iButton = getibuttonid()
-"""
 x = 0
 while x < 5:
     if connected():
