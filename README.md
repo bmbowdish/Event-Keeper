@@ -4,6 +4,7 @@ Event Keeper is the fastest way to take attendance with an iButton.
 
 
 Parts:
+
 Arduino
 iButton reader
 12 wires 
@@ -16,5 +17,3 @@ raspberry pi
 raspberry pi touch screen
 
 internet connection
-
-ibutton-reader.ino is written by 
